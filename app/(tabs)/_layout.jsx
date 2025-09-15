@@ -31,7 +31,8 @@ export default function _Layout () {
                     color={color}/>)
             }}
             />
-           
+
+             
         </Tabs>
     )
 }

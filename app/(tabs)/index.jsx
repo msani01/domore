@@ -1,65 +1,78 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  Dimensions,
-  TouchableOpacity,
-} from "react-native";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Link } from "expo-router";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { useContext, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { db } from "../../config/firebase.config";
+import { AuthContext } from "../../config/context.config";
 
 const screenWidth = Dimensions.get("window").width;
 
 export default function Dashboard() {
-  // Task data
-  const [tasks, setTasks] = useState([
-    // {
-    //   id: "1",
-    //   title: "Design the Sign In/Sign Up Screen",
-    //   dueDate: "2025-09-05 14:00",
-    //   completed: false,
-    // },
-    // {
-    //   id: "2",
-    //   title: "5 Aside Football Match",
-    //   dueDate: "2025-09-05 16:30",
-    //   completed: false,
-    // },
-    // {
-    //   id: "3",
-    //   title: "Finish React Native Dashboard",
-    //   dueDate: "2025-09-06 10:00",
-    //   completed: true,
-    // },
-    // {
-    //   id: "4",
-    //   title: "Sleep for 4 hours 😴",
-    //   dueDate: "2025-09-06 18:00",
-    //   completed: false,
-    // },
-  ]);
+  const { currentUser } = useContext(AuthContext);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // fetch only the logged in user tasks
+  useEffect(() => {
+    if (!currentUser) return; // prevent query if user not ready
+
+    const q = query(
+      collection(db, "tasks"),
+      where("createdBy", "==", currentUser.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedTasks = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setTasks(fetchedTasks);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   // stats
   const total = tasks.length;
   const completed = tasks.filter((t) => t.completed).length;
-  const pending = tasks.filter((t) => !t.completed).length;
   const overdue = tasks.filter(
-    (t) => !t.completed && new Date(t.dueDate) < new Date()
+    (t) => !t.completed && t.dueDate && new Date(t.dueDate) < new Date()
   ).length;
+
+  // pending excludes overdue
+  const pending = tasks.filter(
+    (t) =>
+      !t.completed &&
+      (!t.dueDate || new Date(t.dueDate) >= new Date())
+  ).length;
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-100">
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text className="text-gray-500 mt-2">Loading your tasks...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ width: screenWidth }} className="flex-1 bg-gray-200">
       {/* header */}
       <View className="px-6 pt-5 pb-6 mt-4">
-        <Text className="text-4xl font-extrabold text-blue-700">
-          Domore 
-        </Text>
+        <Text className="text-4xl font-extrabold text-blue-700">Domore</Text>
         <Text className="text-gray-600 text-lg mt-1">
           Welcome back, <Text className="font-bold">Super Achiever</Text> 👋
         </Text>
-        
       </View>
 
       {/* cards */}
@@ -69,6 +82,7 @@ export default function Dashboard() {
           <Text className="text-gray-500 mt-2">Total</Text>
           <Text className="text-3xl font-extrabold text-blue-700">{total}</Text>
         </View>
+
         <View className="flex-1 bg-white rounded-2xl p-4 ml-2 shadow-md">
           <MaterialIcons name="check-circle" size={28} color="#22c55e" />
           <Text className="text-gray-500 mt-2">Completed</Text>
@@ -80,33 +94,33 @@ export default function Dashboard() {
 
       <View className="flex-row justify-between px-4 mt-4">
         <View className="flex-1 bg-white rounded-2xl p-4 mr-2 shadow-md">
-          <MaterialIcons name="pending-actions" size={28} color="#f59e0b" />
+          <MaterialIcons name="pending-actions" size={28} color="#3b82f6" />
           <Text className="text-gray-500 mt-2">Pending</Text>
-          <Text className="text-3xl font-extrabold text-yellow-500">
+          <Text className="text-3xl font-extrabold text-blue-500">
             {pending}
           </Text>
+          <Text className="text-xs font-medium text-gray-400 mt-1">
+            Tasks still on track ⏳
+          </Text>
         </View>
+
         <View className="flex-1 bg-white rounded-2xl p-4 ml-2 shadow-md">
           <MaterialIcons name="error-outline" size={28} color="#ef4444" />
           <Text className="text-gray-500 mt-2">Overdue</Text>
-          <Text className="text-3xl font-extrabold text-red-500">
-            {overdue}
+          <Text className="text-3xl font-extrabold text-red-500">{overdue}</Text>
+          <Text className="text-xs font-medium text-gray-400 mt-1">
+            Needs attention ⚠️
           </Text>
         </View>
       </View>
 
-      {/* tasks header */}
+      {/* task header */}
       <View className="flex flex-row items-center justify-between mt-6 px-4">
-        <Text className="text-xl font-extrabold text-gray-800">My Tasks </Text>
-        <Link href={"@/"} >
-          <TouchableOpacity className="bg-blue-600 rounded-full px-3 py-3 shadow-md flex-row items-center">
-            <AntDesign name="plus" size={20} color="white" />
-          </TouchableOpacity>
-        </Link>
+        <Text className="text-xl font-extrabold text-gray-800">My Tasks</Text>
       </View>
 
-      {/* taks */}
-      <ScrollView className="mt-4 px-4 mb-">
+      {/* tasks */}
+      <ScrollView className="mt-4 px-4 mb-20">
         {tasks.length === 0 ? (
           <View className="items-center justify-center mt-10">
             <Text className="text-gray-400 mt-3 text-lg">
@@ -134,13 +148,16 @@ export default function Dashboard() {
                 {task.title}
               </Text>
               <Text className="text-sm text-gray-500">
-                Due: {new Date(task.dueDate).toLocaleString()}
+                Due:{" "}
+                {task.dueDate
+                  ? new Date(task.dueDate).toLocaleString()
+                  : "No due date"}
               </Text>
               {task.completed ? (
                 <Text className="mt-2 text-green-600 text-sm font-semibold">
                   ✅ Completed
                 </Text>
-              ) : new Date(task.dueDate) < new Date() ? (
+              ) : task.dueDate && new Date(task.dueDate) < new Date() ? (
                 <Text className="mt-2 text-red-500 text-sm font-semibold">
                   ⚠️ Overdue
                 </Text>
@@ -154,7 +171,15 @@ export default function Dashboard() {
         )}
       </ScrollView>
 
-      {/*  */}
+      {/* Add task */}
+      <Link
+        href={{ pathname: "/add-tasks/[tasks]", params: { tasks: "new" } }}
+        asChild
+      >
+        <TouchableOpacity className="bg-blue-600 rounded-full p-4 shadow-lg absolute bottom-6 right-6">
+          <AntDesign name="plus" size={24} color="white" />
+        </TouchableOpacity>
+      </Link>
     </View>
   );
 }

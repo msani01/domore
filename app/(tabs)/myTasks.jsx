@@ -1,53 +1,44 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  Pressable,
-} from "react-native";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { Link } from "expo-router";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { useEffect, useState, useContext } from "react";
+import { ActivityIndicator, Dimensions, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { db } from "../../config/firebase.config";
+import { AuthContext } from "@/config/context.config";
 
 const screenWidth = Dimensions.get("window").width;
 
 export default function MyTasks() {
-  // Sample task data
-  const [tasks, setTasks] = useState([
-    // {
-    //   id: "1",
-    //   title: "Design the Sign In/Sign Up Screen",
-    //   dueDate: "2025-09-05 14:00",
-    //   completed: false,
-    // },
-    // {
-    //   id: "2",
-    //   title: "5 Aside Football Match",
-    //   dueDate: "2025-09-05 16:30",
-    //   completed: true,
-    // },
-    // {
-    //   id: "3",
-    //   title: "Finish React Native Dashboard",
-    //   dueDate: "2025-08-30 10:00", // Overdue task example
-    //   completed: false,
-    // },
-    // {
-    //   id: "4",
-    //   title: "Sleep for 4 hours 😴",
-    //   dueDate: "2025-09-06 18:00",
-    //   completed: false,
-    // },
-  ]);
-
+  const { currentUser } = useContext(AuthContext);
+  const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
 
-  // check overdue
+  // Fetch tasks for logged-in user only
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const q = query(
+      collection(db, "tasks"),
+      where("createdBy", "==", currentUser.uid) // filter by userId
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetched = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        data: doc.data(),
+      }));
+      setTasks(fetched);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
   const isOverdue = (task) =>
-    !task.completed && new Date(task.dueDate) < new Date();
+    !task.completed && task.dueDate && new Date(task.dueDate) < new Date();
 
-  // tasks filter tab
+  // filter task
   const filteredTasks =
     filter === "All"
       ? tasks
@@ -55,52 +46,38 @@ export default function MyTasks() {
       ? tasks.filter((t) => t.completed)
       : filter === "Pending"
       ? tasks.filter((t) => !t.completed && !isOverdue(t))
-      : tasks.filter((t) => isOverdue(t)); 
+      : tasks.filter((t) => isOverdue(t));
 
   return (
-    <View style={{ width: screenWidth }} className="flex-1 bg-gray-200 pt-10 relative">
-
+    <View
+      style={{ width: screenWidth }}
+      className="flex-1 bg-gray-200 pt-10 relative"
+    >
       {/* header */}
       <View className="flex-row justify-between items-center px-5 mb-4">
         <View>
           <Text className="text-3xl font-extrabold text-blue-700 tracking-tight">
-            My Task(s) 
+            My Task(s)
           </Text>
           <Text className="text-gray-500 text-base mt-1">
-            Stay on top of your goals 
+            Stay on top of your goals
           </Text>
         </View>
-        
-       <Link href={"./add-tasks/[tasks]"}>
-        <View
-          className="bg-blue-600 rounded-full p-3 shadow-lg absolute bottom-4 right-4"
-        >
-          <AntDesign name="plus" size={20} color="white" />
-        </View>
-       </Link>
       </View>
 
-      {/* tabs filter */}
+      {/* filter tabs */}
       <View className="flex-row justify-around px-5 mb-5 flex-wrap">
         {["All", "Pending", "Completed", "Overdue"].map((item) => (
           <TouchableOpacity
             key={item}
             onPress={() => setFilter(item)}
             className={`px-5 py-2 rounded-full shadow-sm mb-2 ${
-              filter === item
-                ? item === "Overdue"
-                  ? "bg-blue-600"
-                  : "bg-blue-600"
-                : "bg-white"
+              filter === item ? "bg-blue-600" : "bg-white"
             }`}
           >
             <Text
               className={`font-bold ${
-                filter === item
-                  ? "text-white"
-                  : item === "Overdue"
-                  ? "text-gray-700"
-                  : "text-gray-700"
+                filter === item ? "text-white" : "text-gray-700"
               }`}
             >
               {item}
@@ -109,56 +86,77 @@ export default function MyTasks() {
         ))}
       </View>
 
-      {/* tasks list */}
-      <ScrollView
-        className="px-5"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
-        {filteredTasks.length === 0 ? (
-          <View className="items-center justify-center mt-20">
-            <Text className="text-gray-500 mt-3 text-lg font-semibold">
-              No tasks 
-            </Text>
-            <Text className="text-gray-400 mt-1">
-              Tap <Text className="font-bold">“+”</Text> to create a task
-            </Text>
-          </View>
-        ) : (
-          filteredTasks.map((task) => (
-            <View
-              key={task.id}
-              className={`rounded-2xl p-4 mb-4 shadow-md border ${
-                task.completed
-                  ? "bg-green-50 border-green-200"
-                  : isOverdue(task)
-                  ? "bg-red-50 border-red-300"
-                  : "bg-white border-gray-100"
-              }`}
-            >
-              <View className="flex-row justify-between items-center">
-                <View className="flex-1 pr-4">
-                  <Text
-                    className={`text-lg font-semibold ${
-                      task.completed
-                        ? "text-gray-400"
-                        : isOverdue(task)
-                        ? "text-red-700"
-                        : "text-gray-800"
-                    }`}
-                  >
-                    {task.title}
-                  </Text>
-                  <Text className="text-sm text-gray-500">
-                    Due: {new Date(task.dueDate).toLocaleString()}
-                  </Text>
-                </View>
-
-              </View>
+      {/* Loader */}
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#2563eb" /> 
+          <Text className="mt-3 text-gray-500">Loading tasks...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          className="px-5"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
+          {filteredTasks.length === 0 ? (
+            <View className="items-center justify-center mt-20">
+              <Text className="text-gray-500 mt-3 text-lg font-semibold">
+                No tasks
+              </Text>
+              <Text className="text-gray-400 mt-1">
+                Tap <Text className="font-bold">“+”</Text> to create a task
+              </Text>
             </View>
-          ))
-        )}
-      </ScrollView>
+          ) : (
+            filteredTasks.map((task) => (
+              <View
+                key={task.id}
+                className={`rounded-2xl p-4 mb-4 shadow-md border ${
+                  task.completed
+                    ? "bg-green-50 border-green-200"
+                    : isOverdue(task)
+                    ? "bg-red-50 border-red-300"
+                    : "bg-white border-gray-100"
+                }`}
+              >
+                <View className="flex-row justify-between items-center">
+                  <View className="flex-1 pr-4">
+                    <Text
+                      className={`text-lg font-semibold ${
+                        task.completed
+                          ? "text-gray-400 line-through"
+                          : isOverdue(task)
+                          ? "text-red-700"
+                          : "text-gray-800"
+                      }`}
+                    >
+                      {task.title}
+                    </Text>
+                    <Text className="text-sm text-gray-500">
+                      Due:{" "}
+                      {task.dueDate
+                        ? new Date(task.dueDate).toLocaleString()
+                        : "No due date"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      )}
+
+      {/* add Tasks */}
+      <Link
+        href={{ pathname: "/add-tasks/[tasks]", params: { tasks: "new" } }}
+        asChild
+      >
+        <TouchableOpacity
+          className="bg-blue-600 rounded-full p-4 shadow-lg absolute bottom-6 right-6"
+        >
+          <AntDesign name="plus" size={24} color="white" />
+        </TouchableOpacity>
+      </Link>
     </View>
   );
 }

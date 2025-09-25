@@ -45,7 +45,7 @@ export default function Signin() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 justify-between bg-gray-200 pt-12 pb-10"
+      className="flex-1 justify-between bg-gray-00 pt-12 pb-10"
       keyboardVerticalOffset={Platform.select({
         ios: 0,
         android: -StatusBar.currentHeight,
@@ -61,7 +61,7 @@ export default function Signin() {
             <Text style={{
               fontFamily: "Nunito_VariableFont"
             }} className="text-5xl font-bold text-blue-600">Domore</Text>
-            <Text className="text-gray-600 font-semibold text-center">
+            <Text className="text-gray-600 font-medium text-center">
               Manage your tasks. Achieve more.
             </Text>
           </View>

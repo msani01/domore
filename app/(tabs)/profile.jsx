@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions } from "rea
 import { AuthContext } from "../../config/context.config";
 import { db } from "../../config/firebase.config";
 import { useRouter } from "expo-router";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot} from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../config/firebase.config";
 
@@ -17,14 +17,18 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!currentUser) return;
-      try {
-        const userRef = doc(db, "users", currentUser.uid);
-        const snap = await getDoc(userRef);
+  if (!currentUser) return;
 
-        if (snap.exists()) setProfile(snap.data());
-        else setProfile({
+  const userRef = doc(db, "users", currentUser.uid);
+
+  // Start real-time listener
+  const unsubscribe = onSnapshot(
+    userRef,
+    (snap) => {
+      if (snap.exists()) {
+        setProfile(snap.data());
+      } else {
+        setProfile({
           firstName: currentUser.displayName || "",
           nickName: "",
           email: currentUser.email || "",
@@ -32,14 +36,19 @@ export default function ProfileScreen() {
           gender: "",
           dob: "",
         });
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
       }
-    };
-    fetchProfile();
-  }, [currentUser]);
+      setLoading(false);
+    },
+    (error) => {
+      console.error("Error fetching profile: ", error);
+      setLoading(false);
+    }
+  );
+
+  // Cleanup listener when component unmounts
+  return () => unsubscribe();
+}, [currentUser]);
+
 
   const handleLogout = async () => {
     try {

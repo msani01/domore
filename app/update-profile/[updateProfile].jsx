@@ -64,20 +64,22 @@ export default function UpdateProfileScreen() {
 
 
   const handleUpdate = async () => {
-    setUpdating(true);
-    try {
-      const userRef = doc(db, "users", uid);
-      await setDoc(userRef, profile, { merge: true });
-      Alert.alert("Success", "Profile updated successfully!", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to update profile.");
-    } finally {
-      setUpdating(false);
-    }
-  };
+  if (!currentUser) return;
+  setUpdating(true);
+  try {
+    const userRef = doc(db, "users", currentUser.uid);
+    await setDoc(userRef, profile, { merge: true });
+    Alert.alert("Success", "Profile updated successfully!", [
+      { text: "OK", onPress: () => router.back() },
+    ]);
+  } catch (err) {
+    console.error("Update error:", err);
+    Alert.alert("Error", "Failed to update profile.");
+  } finally {
+    setUpdating(false);
+  }
+};
+
 
   if (loading) {
     return (

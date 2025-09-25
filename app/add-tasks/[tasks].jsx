@@ -109,7 +109,7 @@ export default function CreateTask() {
             className="text-base text-gray-500 mb-1 font-bold">Task title:</Text>
           <TextInput
             className="border border-gray-300 bg-white rounded-lg px-4 py-3 text-base"
-            placeholder="e.g. Dinner Date."
+            placeholder="e.g. Maths Assignmet."
             value={title}
             onChangeText={setTitle}
           />

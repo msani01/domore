@@ -7,7 +7,7 @@ import { View, ActivityIndicator, Platform } from "react-native";
 import "./global.css";
 
 
-// Configure how notifications behave when received
+// configure how notifications behave when received
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,

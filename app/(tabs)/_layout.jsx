@@ -13,7 +13,7 @@ export default function _Layout () {
                 headerShown: false,
                 tabBarIcon: ({color}) => (
                     <MaterialIcons 
-                    name="home" 
+                    name="dashboard" 
                     size={30} 
                     color={color}/>)
             }}
@@ -23,6 +23,19 @@ export default function _Layout () {
             name="myTasks"
             options={{
                 title: "My Tasks",
+                headerShown: false,
+                tabBarIcon: ({color}) => (
+                    <MaterialIcons 
+                    name="task" 
+                    size={30} 
+                    color={color}/>)
+            }}
+            />
+
+            <Tabs.Screen
+            name="profile"
+            options={{
+                title: "My Profile",
                 headerShown: false,
                 tabBarIcon: ({color}) => (
                     <FontAwesome5 

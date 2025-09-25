@@ -1,9 +1,47 @@
 import { Stack } from "expo-router";
-import { useContext } from "react";
+import * as Notifications from "expo-notifications";
+import { useContext, useEffect } from "react";
 import { AuthProvider, AuthContext } from "../config/context.config";
+import { useFonts } from 'expo-font';
+import { View, ActivityIndicator, Platform } from "react-native";
 import "./global.css";
 
+
+// Configure how notifications behave when received
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+
 export default function RootLayout() {
+useEffect(() => {
+    async function requestPermissions() {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== "granted") {
+        alert("Permission for notifications not granted!");
+      }
+    }
+    requestPermissions();
+  }, []);
+
+  const [fontsLoaded] = useFonts({
+   Nunito_VariableFont: require("../assets/fonts/Nunito-VariableFont_wght.ttf"),
+    
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+
   return (
     <AuthProvider>
       <AuthWrapper />
@@ -17,7 +55,7 @@ function AuthWrapper() {
   return (
     <Stack
       screenOptions={{ headerShown: false }}
-      initialRouteName={currentUser ? "(tabs)" : "signup"} // ✅ safer way
+      initialRouteName={currentUser ? "(tabs)" : "index"} // 
     >
       <Stack.Screen
         name="(tabs)"
@@ -36,9 +74,10 @@ function AuthWrapper() {
         options={{ headerShown: false, title: "Home" }}
       />
       <Stack.Screen
-        name="add-tasks/[tasks]"
-        options={{ headerShown: false, title: "Add Task" }}
-      />
+      name="view-tasks/[taskid]"
+      options={{ headerShown: false, title: "Task Details" }}
+    />
     </Stack>
+    
   );
 }
